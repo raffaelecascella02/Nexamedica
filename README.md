@@ -2,7 +2,6 @@
 
 > **Project Work per il Corso di Laurea in Informatica per le Aziende Digitali (L-31)**  
 > **Università Telematica Pegaso** — Anno Accademico 2025/2026  
-> **Materia di riferimento:** Tecnologie Web & Programmazione Distribuita
 
 ---
 
