@@ -1,4 +1,5 @@
 from pydantic import BaseModel, EmailStr, ConfigDict, Field, field_validator
+from typing import Optional
 from datetime import date
 import codicefiscale
 from models import RuoloUtente, Sesso, MansioneAmministratore, StatoPagamento, StatoVisita # Importiamo gli Enum di SQLAlchemy da models.py
@@ -40,6 +41,18 @@ class PazienteCreate(PazienteBase):
 class PazienteResponse(PazienteBase):
     id_paziente: int
     model_config = ConfigDict(from_attributes=True)
+
+# Schema per l'aggiornamento parziale (PATCH/PUT) - Tutti i campi sono opzionali
+class PazienteUpdate(BaseModel):
+    email: Optional[EmailStr] = None
+    nome: Optional[str] = None
+    cognome: Optional[str] = None
+    sesso: Optional[str] = None
+    codice_fiscale: Optional[str] = None
+    indirizzo_residenza: Optional[str] = None
+    indirizzo_domicilio: Optional[str] = None
+    recapito_telefonico: Optional[str] = None
+    password: Optional[str] = None
 
 # --- MEDICO ---
 class MedicoBase(AccountBase):
