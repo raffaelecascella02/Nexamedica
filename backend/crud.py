@@ -1,12 +1,12 @@
 from sqlalchemy.orm import Session
-import models, schemas
+import models, schemas, security
 
 # --- PAZIENTE ---
 # CREATE
 def create_paziente(db: Session, paziente: schemas.PazienteCreate):
     db_paziente = models.Paziente(
         email = paziente.email,
-        hashed_password = paziente.password,
+        hashed_password = security.get_password_hash(paziente.password),
         ruolo = models.RuoloUtente.paziente,
 
         nome = paziente.nome,
@@ -40,10 +40,10 @@ def update_paziente(db: Session, paziente_id: int, dati_aggiornamento: schemas.P
     if db_paziente:
         # Trasforma i dati in ingresso in un dizionario, scartando i campi non inviati
         update_data = dati_aggiornamento.model_dump(exclude_unset=True)
-
+    
         for chiave, valore in update_data.items():
             if chiave == "password":
-                setattr(db_paziente, "hashed_password", valore)
+                setattr(db_paziente, "hashed_password", security.get_password_hash(valore))
             elif chiave == "ruolo":
                 continue
             else:
