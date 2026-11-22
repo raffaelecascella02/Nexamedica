@@ -4,7 +4,7 @@ from datetime import date
 import codicefiscale
 from models import RuoloUtente, Sesso, MansioneAmministratore, StatoPagamento, StatoVisita # Importiamo gli Enum di SQLAlchemy da models.py
 
-# --- ACCOUNT ---
+#region ACCOUNT
 class AccountBase(BaseModel):
     email: EmailStr
     ruolo: RuoloUtente
@@ -15,8 +15,9 @@ class AccountCreate(AccountBase):
 class AccountResponse(AccountBase):
     id_account: int
     model_config = ConfigDict(from_attributes=True)
+#endregion
 
-# --- PAZIENTE ---
+#region PAZIENTE
 class PazienteBase(AccountBase):
     nome: str
     cognome: str
@@ -47,14 +48,15 @@ class PazienteUpdate(BaseModel):
     email: Optional[EmailStr] = None
     nome: Optional[str] = None
     cognome: Optional[str] = None
-    sesso: Optional[str] = None
-    codice_fiscale: Optional[str] = None
+    sesso: Optional[Sesso] = None
+    codice_fiscale: Optional[str] = Field(None, pattern=r"^[A-Z]{6}\d{2}[A-Z]\d{2}[A-Z]\d{3}[A-Z]$")
     indirizzo_residenza: Optional[str] = None
     indirizzo_domicilio: Optional[str] = None
     recapito_telefonico: Optional[str] = None
     password: Optional[str] = None
+#endregion
 
-# --- MEDICO ---
+#region MEDICO
 class MedicoBase(AccountBase):
     nome: str
     cognome: str
@@ -69,7 +71,17 @@ class MedicoResponse(MedicoBase):
     id_medico: int
     model_config = ConfigDict(from_attributes=True)
 
-# --- AMMINISTRATORE ---
+class MedicoUpdate(BaseModel):
+    email: Optional[EmailStr] = None
+    nome: Optional[str] = None
+    cognome: Optional[str] = None
+    matricola: Optional[str] = Field(None, min_length=5, max_length=10)
+    specializzazione: Optional[str] = None
+    reparto: Optional[str] = None
+    password: Optional[str] = None
+#endregion
+
+#region AMMINISTRATORE
 class AmministratoreBase(AccountBase):
     nome: str
     cognome: str
@@ -81,8 +93,9 @@ class AmministratoreCreate(AmministratoreBase):
 class AmministratoreResponse(AmministratoreBase):
     id_amministratore: int
     model_config = ConfigDict(from_attributes=True)
+#endregion
 
-# --- CATALOGO PRESTAZIONI ---
+#region CATALOGO PRESTAZIONI
 class CatalogoPrestazioniBase(BaseModel):
     nome_visita: str
     costo_base: float
@@ -93,8 +106,9 @@ class CatalogoPrestazioniCreate(CatalogoPrestazioniBase):
 class CatalogoPrestazioniResponse(CatalogoPrestazioniBase):
     id_prestazione: int
     model_config = ConfigDict(from_attributes=True)
+#endregion
 
-# --- PRENOTAZIONE ---
+#region PRENOTAZIONE
 class PrenotazioneBase(BaseModel):
     id_paziente: int
     id_medico: int
@@ -112,8 +126,9 @@ class PrenotazioneCreate(PrenotazioneBase):
 class PrenotazioneResponse(PrenotazioneBase):
     id_prenotazione: int
     model_config = ConfigDict(from_attributes=True)
+#endregion
 
-# --- REFERTO ---
+#region REFERTO
 class RefertoBase(BaseModel):
     id_prenotazione: int
     data_emissione: date
@@ -126,3 +141,4 @@ class RefertoCreate(RefertoBase):
 class RefertoResponse(RefertoBase):
     id_referto: int
     model_config = ConfigDict(from_attributes=True)
+#endregion

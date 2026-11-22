@@ -28,6 +28,7 @@ class MansioneAmministratore(str, enum.Enum):
     it_sysadmin = "IT System Administrator"
 
 # Definizione delle classi ORM
+#region ACCOUNT
 class Account(Base):
     __tablename__ = "account"
 
@@ -40,9 +41,11 @@ class Account(Base):
         "polymorphic_identity": "account",
         "polymorphic_on": ruolo,
     }
+#endregion
 
+#region AMMINISTRATORE
 class Amministratore(Account):
-    __tablename__ = "amministratore"
+    __tablename__ = "admin"
 
     id_amministratore = Column(Integer, ForeignKey("account.id_account"), primary_key=True)
     nome = Column(String, nullable=False)
@@ -50,9 +53,11 @@ class Amministratore(Account):
     mansione = Column(Enum(MansioneAmministratore), nullable=False, default=MansioneAmministratore.segreteria)
 
     __mapper_args__ = {
-        "polymorphic_identity": "amministratore",
+        "polymorphic_identity": "admin",
     }
+#endregion
 
+#region PAZIENTE
 class Paziente(Account):
     __tablename__ = "paziente"
 
@@ -68,28 +73,34 @@ class Paziente(Account):
     __mapper_args__ = {
         "polymorphic_identity": "paziente",
     }
+#endregion
 
+#region MEDICO
 class Medico(Account):
     __tablename__ = "medico"
 
     id_medico = Column(Integer, ForeignKey("account.id_account"), primary_key=True)
     nome = Column(String, nullable=False)
     cognome = Column(String, nullable=False)
-    matricola = Column(String, nullable=False, index=True)
+    matricola = Column(String, nullable=False, index=True, unique=True)
     specializzazione = Column(String, nullable=False, index=True)
     reparto = Column(String, nullable=False, index=True)
 
     __mapper_args__ = {
         "polymorphic_identity": "medico",
     }
+#endregion 
 
+#region CATALOGO PRESTAZIONI
 class CatalogoPrestazioni(Base):
     __tablename__ = "catalogo_prestazioni"
 
     id_prestazione = Column(Integer, primary_key=True)
     nome_visita = Column(String, nullable=False, index=True)
     costo_base = Column(Float, nullable=False)
+#endregion 
 
+#region PRENOTAZIONE 
 class Prenotazione(Base):
     __tablename__ = "prenotazione"
 
@@ -103,7 +114,9 @@ class Prenotazione(Base):
     stato_visita = Column(Enum(StatoVisita), nullable=False)
     costo_applicato = Column(Float, nullable=False)
     stato_pagamento = Column(Enum(StatoPagamento), nullable=False)
+#endregion
 
+#region REFERTO
 class Referto(Base):
     __tablename__ = "referto"
 
@@ -112,3 +125,4 @@ class Referto(Base):
     data_emissione = Column(Date, nullable=False)
     descrizione_sintomi = Column(String)
     diagnosi = Column(String, nullable=False)
+#endregion
