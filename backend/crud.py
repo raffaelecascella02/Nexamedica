@@ -140,3 +140,57 @@ def delete_medico_by_matricola(db: Session, matricola: str):
         db.commit()
     return db_medico
 #endregion
+
+#region CATALOGO PRESTAZIONI
+# CREATE
+def create_prestazione(db: Session, catalogo_prestazioni: schemas.CatalogoPrestazioniCreate):
+    db_catalogo = models.CatalogoPrestazioni(
+        nome_visita = catalogo_prestazioni.nome_visita,
+        costo_base = catalogo_prestazioni.costo_base
+    )
+
+    db.add(db_catalogo)
+    db.commit()
+    db.refresh(db_catalogo)
+    return db_catalogo
+
+# READ
+def get_prestazioni(db: Session, skip: int = 0, amount: int = 100):
+    return db.query(models.CatalogoPrestazioni).offset(skip).limit(amount).all()
+
+def get_prestazione(db: Session, prestazione_id: int):
+    return db.query(models.CatalogoPrestazioni).filter(models.CatalogoPrestazioni.id_prestazione == prestazione_id).first()
+
+def get_prestazione_by_nome(db: Session, nome_visita: str):
+    return db.query(models.CatalogoPrestazioni).filter(models.CatalogoPrestazioni.nome_visita.ilike(nome_visita.strip())).first()
+
+# UPDATE
+def update_prestazione(db: Session, prestazione_id: int, dati_aggiornamento: schemas.CatalogoPrestazioniUpdate):
+    db_prestazione = get_prestazione(db, prestazione_id)
+
+    if db_prestazione:
+            update_data = dati_aggiornamento.model_dump(exclude_unset=True)
+        
+            for chiave, valore in update_data.items():
+                if chiave == "password":
+                    setattr(db_prestazione, "hashed_password", security.get_password_hash(valore))
+                elif chiave == "ruolo":
+                    continue
+                else:
+                    setattr(db_prestazione, chiave, valore)
+    
+            db.commit()
+            db.refresh(db_prestazione)
+    
+    return db_prestazione
+
+# DELETE
+def delete_prestazione(db: Session, prestazione_id):
+    db_prestazione = get_prestazione(db, prestazione_id)
+
+    if db_prestazione:
+        db.delete(db_prestazione)
+        db.commit
+
+    return db_prestazione
+# endregion

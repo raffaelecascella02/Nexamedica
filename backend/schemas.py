@@ -106,6 +106,10 @@ class CatalogoPrestazioniCreate(CatalogoPrestazioniBase):
 class CatalogoPrestazioniResponse(CatalogoPrestazioniBase):
     id_prestazione: int
     model_config = ConfigDict(from_attributes=True)
+
+class CatalogoPrestazioniUpdate(BaseModel):
+    nome_visita: Optional[str] = None
+    costo_base: Optional[float] = Field(None, gt=0)
 #endregion
 
 #region PRENOTAZIONE
