@@ -2,6 +2,7 @@ from fastapi import FastAPI, Depends, HTTPException
 from sqlalchemy.orm import Session
 from database import engine, get_db
 import models, crud, schemas
+from typing import cast
 
 models.Base.metadata.create_all(bind=engine)
 
@@ -139,7 +140,7 @@ def lista_prestazione_by_id(id_prestazione: int, db: Session = Depends(get_db)):
     db_prestazione = crud.get_prestazione(db, id_prestazione)
 
     if not db_prestazione:
-            raise HTTPException(status_code=404, detail="ID prestazione non presente a sistema.")
+        raise HTTPException(status_code=404, detail="ID prestazione non presente a catalogo.")
     
     return db_prestazione   
 
@@ -164,7 +165,7 @@ def update_prestazione(id_prestazione: int, dati_aggiornamento: schemas.Catalogo
     return crud.update_prestazione(db, id_prestazione, dati_aggiornamento)
 
 # Rotta per cancellare una prestazione presente nel catalogo
-@app.delete("/prestazioni/{id_prestazione}")
+@app.delete("/prestazioni/{id_prestazione}", response_model=schemas.CatalogoPrestazioniResponse)
 def delete_prestazione(id_prestazione: int, db: Session = Depends(get_db)):
     db_prestazione = crud.delete_prestazione(db, id_prestazione)
 
@@ -172,4 +173,90 @@ def delete_prestazione(id_prestazione: int, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="ID prestazione non presente a catalogo.")
 
     return db_prestazione
+#endregion
+
+#region PRENOTAZIONE
+# Rotta per leggere tutte le prenotazioni presenti a sistema
+@app.get("/prenotazioni/", response_model=list[schemas.PrenotazioneResponse])
+def lista_prenotazioni(db: Session=Depends(get_db)):
+    return crud.get_prenotazioni(db)
+
+# Rotta per leggere i dati di una singola prenotazione presente a DB
+@app.get("/prenotazioni/{id_prenotazione}", response_model=schemas.PrenotazioneResponse)
+def lista_prenotazione_by_id(id_prenotazione: int, db: Session = Depends(get_db)):
+    db_prenotazione = crud.get_prenotazione(db, id_prenotazione)
+
+    if not db_prenotazione:
+        raise HTTPException(status_code=404, detail="ID prenotazione non presente a sistema.")
+    
+    return db_prenotazione
+
+# Rotta per leggere tutte le prenotazioni di un singolo paziente
+@app.get("/prenotazioni/paziente/{id_paziente}", response_model=list[schemas.PrenotazioneResponse])
+def lista_prenotazioni_by_paziente(id_paziente: int, db: Session = Depends(get_db)):
+    if not crud.get_paziente(db, id_paziente):
+        raise HTTPException(status_code=404, detail="ID paziente non presente a sistema.")
+
+    return crud.get_prenotazioni_by_paziente(db, id_paziente)
+
+# Rotta per leggere tutte le prenotazioni di un singolo medico
+@app.get("/prenotazioni/medico/{id_medico}", response_model=list[schemas.PrenotazioneResponse])
+def lista_prenotazioni_by_medico(id_medico: int, db: Session = Depends(get_db)):
+    if not crud.get_medico(db, id_medico):
+        raise HTTPException(status_code=404, detail="ID medico non presente a sistema.")
+
+    return crud.get_prenotazioni_by_medico(db, id_medico)
+
+# Rotta per l'inserimento di una prenotazione a DB
+@app.post("/prenotazioni/", response_model=schemas.PrenotazioneResponse, status_code=201)
+def create_prenotazione(prenotazione: schemas.PrenotazioneCreate, db: Session = Depends(get_db)):
+    if not crud.get_paziente(db, prenotazione.id_paziente):
+        raise HTTPException(status_code=404, detail="ID paziente non presente a sistema")
+    
+    if not crud.get_medico(db, prenotazione.id_medico):
+        raise HTTPException(status_code=404, detail="ID medico non presente a sistema")
+    
+    db_prestazione = crud.get_prestazione(db, prenotazione.id_prestazione)
+    if not db_prestazione:
+        raise HTTPException(status_code=404, detail="ID prestazione non presente a sistema")
+
+    db_duplicata = crud.get_prenotazione_duplicata(
+        db,
+        prenotazione.id_paziente,
+        prenotazione.id_medico,
+        prenotazione.id_prestazione,
+        prenotazione.data_appuntamento
+    )
+    if db_duplicata:
+        raise HTTPException(status_code=400, detail="Prenotazione già presente per questa data.")
+
+    return crud.create_prenotazione(db, prenotazione, cast(float, db_prestazione.costo_base))
+
+# Rotta per modificare una prenotazione
+@app.patch("/prenotazioni/{id_prenotazione}", response_model=schemas.PrenotazioneResponse)
+def update_prenotazione(id_prenotazione: int, dati_aggiornamento: schemas.PrenotazioneUpdate, db: Session = Depends(get_db)):
+    db_prenotazione = crud.get_prenotazione(db, id_prenotazione)
+
+    if not db_prenotazione:
+        raise HTTPException(status_code=404, detail="ID prenotazione non presente a sistema.")
+
+    if dati_aggiornamento.costo_applicato is not None:
+        db_prestazione = crud.get_prestazione(db, cast(int, db_prenotazione.id_prestazione))
+        if db_prestazione and dati_aggiornamento.costo_applicato > cast(float, db_prestazione.costo_base):
+            raise HTTPException(
+                status_code=400,
+                detail=f"Il costo applicato non può superare il costo base a catalogo ({db_prestazione.costo_base} €)."
+            )
+
+    return crud.update_prenotazione(db, id_prenotazione, dati_aggiornamento)
+
+# Rotta per cancellare una prenotazione presente nel sistema
+@app.delete("/prenotazioni/{id_prenotazione}", response_model=schemas.PrenotazioneResponse)
+def delete_prenotazione(id_prenotazione: int, db: Session = Depends(get_db)):
+    db_prenotazione = crud.delete_prenotazione(db, id_prenotazione)
+
+    if not db_prenotazione:
+        raise HTTPException(status_code=404, detail="ID prenotazione non presente a sistema.")
+
+    return db_prenotazione
 #endregion

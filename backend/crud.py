@@ -1,5 +1,6 @@
 from sqlalchemy.orm import Session
 import models, schemas, security
+from datetime import date
 
 #region PAZIENTE
 # CREATE
@@ -185,7 +186,7 @@ def update_prestazione(db: Session, prestazione_id: int, dati_aggiornamento: sch
     return db_prestazione
 
 # DELETE
-def delete_prestazione(db: Session, prestazione_id):
+def delete_prestazione(db: Session, prestazione_id: int):
     db_prestazione = get_prestazione(db, prestazione_id)
 
     if db_prestazione:
@@ -194,3 +195,77 @@ def delete_prestazione(db: Session, prestazione_id):
 
     return db_prestazione
 # endregion
+
+#region PRENOTAZIONE
+# CREATE
+def create_prenotazione(db: Session, prenotazione: schemas.PrenotazioneCreate, costo_applicato: float):
+    db_prenotazione = models.Prenotazione(
+        id_paziente = prenotazione.id_paziente,
+        id_medico = prenotazione.id_medico,
+        id_prestazione = prenotazione.id_prestazione,
+        data_prenotazione = prenotazione.data_prenotazione,
+        data_appuntamento = prenotazione.data_appuntamento,
+        luogo = prenotazione.luogo,
+        stato_visita = prenotazione.stato_visita,
+        costo_applicato = costo_applicato,
+        stato_pagamento = prenotazione.stato_pagamento
+    )
+
+    db.add(db_prenotazione)
+    db.commit()
+    db.refresh(db_prenotazione)
+    return db_prenotazione
+
+# READ
+def get_prenotazioni(db: Session, skip: int = 0, amount: int = 100):
+    return db.query(models.Prenotazione).offset(skip).limit(amount).all()
+
+def get_prenotazione(db: Session, prenotazione_id: int):
+    return db.query(models.Prenotazione).filter(models.Prenotazione.id_prenotazione == prenotazione_id).first()
+
+def get_prenotazioni_by_paziente(db: Session, paziente_id: int):
+    return db.query(models.Prenotazione).filter(models.Prenotazione.id_paziente == paziente_id).all()
+
+def get_prenotazioni_by_medico(db: Session, medico_id: int):
+    return db.query(models.Prenotazione).filter(models.Prenotazione.id_medico == medico_id).all()
+
+def get_prenotazione_duplicata(
+    db: Session,
+    paziente_id: int,
+    medico_id: int,
+    prestazione_id: int,
+    data_appuntamento: date
+):
+    return db.query(models.Prenotazione).filter(
+        models.Prenotazione.id_paziente == paziente_id,
+        models.Prenotazione.id_medico == medico_id,
+        models.Prenotazione.id_prestazione == prestazione_id,
+        models.Prenotazione.data_appuntamento == data_appuntamento
+    ).first()
+
+# UPDATE
+def update_prenotazione(db: Session, prenotazione_id: int, dati_aggiornamento: schemas.PrenotazioneUpdate):
+    db_prenotazione = get_prenotazione(db, prenotazione_id)
+
+    if db_prenotazione:
+        update_data = dati_aggiornamento.model_dump(exclude_unset=True)
+    
+        for chiave, valore in update_data.items():
+            setattr(db_prenotazione, chiave, valore)
+            
+        db.commit()
+        db.refresh(db_prenotazione)
+    
+    return db_prenotazione
+
+# DELETE
+def delete_prenotazione(db: Session, prenotazione_id: int):
+    db_prenotazione = get_prenotazione(db, prenotazione_id)
+
+    if db_prenotazione:
+        db.delete(db_prenotazione)
+        db.commit()
+
+    return db_prenotazione
+
+#endregion

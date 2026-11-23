@@ -121,7 +121,6 @@ class PrenotazioneBase(BaseModel):
     data_appuntamento: date
     luogo: str
     stato_visita: StatoVisita
-    costo_applicato: float = Field(..., ge=0)
     stato_pagamento: StatoPagamento
 
 class PrenotazioneCreate(PrenotazioneBase):
@@ -130,6 +129,14 @@ class PrenotazioneCreate(PrenotazioneBase):
 class PrenotazioneResponse(PrenotazioneBase):
     id_prenotazione: int
     model_config = ConfigDict(from_attributes=True)
+    costo_applicato: float = Field(..., ge=0)
+
+class PrenotazioneUpdate(BaseModel):
+    data_appuntamento: Optional[date] = None
+    luogo: Optional[str] = None
+    stato_visita: Optional[StatoVisita] = None
+    costo_applicato: Optional[float] = Field(None, ge=0)
+    stato_pagamento: Optional[StatoPagamento] = None
 #endregion
 
 #region REFERTO
