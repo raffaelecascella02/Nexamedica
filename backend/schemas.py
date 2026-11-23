@@ -98,7 +98,7 @@ class AmministratoreResponse(AmministratoreBase):
 #region CATALOGO PRESTAZIONI
 class CatalogoPrestazioniBase(BaseModel):
     nome_visita: str
-    costo_base: float
+    costo_base: float = Field(..., gt=0)
 
 class CatalogoPrestazioniCreate(CatalogoPrestazioniBase):
     pass
@@ -110,14 +110,14 @@ class CatalogoPrestazioniResponse(CatalogoPrestazioniBase):
 
 #region PRENOTAZIONE
 class PrenotazioneBase(BaseModel):
-    id_paziente: int
-    id_medico: int
-    id_prestazione: int
+    id_paziente: int = Field(..., gt=0)
+    id_medico: int = Field(..., gt=0)
+    id_prestazione: int = Field(..., gt=0)
     data_prenotazione: date
     data_appuntamento: date
     luogo: str
     stato_visita: StatoVisita
-    costo_applicato: float
+    costo_applicato: float = Field(..., ge=0)
     stato_pagamento: StatoPagamento
 
 class PrenotazioneCreate(PrenotazioneBase):
@@ -130,7 +130,7 @@ class PrenotazioneResponse(PrenotazioneBase):
 
 #region REFERTO
 class RefertoBase(BaseModel):
-    id_prenotazione: int
+    id_prenotazione: int = Field(..., gt=0)
     data_emissione: date
     descrizione_sintomi: str | None = None
     diagnosi: str
