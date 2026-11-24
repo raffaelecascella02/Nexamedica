@@ -3,6 +3,7 @@ from sqlalchemy.orm import Session
 from database import engine, get_db
 import models, crud, schemas
 from typing import cast
+from datetime import date
 
 models.Base.metadata.create_all(bind=engine)
 
@@ -259,4 +260,69 @@ def delete_prenotazione(id_prenotazione: int, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="ID prenotazione non presente a sistema.")
 
     return db_prenotazione
+#endregion
+
+#region REFERTO
+# Rotta per leggere tutti i referti presenti a sistema (con paginazione)
+@app.get("/referti/", response_model=list[schemas.RefertoResponse])
+def lista_referti(skip: int = 0, amount: int = 100, db: Session = Depends(get_db)):
+    return crud.get_referti(db, skip, amount)
+
+# Rotta per leggere un singolo referto tramite ID
+@app.get("/referti/{id_referto}", response_model=schemas.RefertoResponse)
+def lista_referto_by_id(id_referto: int, db: Session = Depends(get_db)):
+    db_referto = crud.get_referto(db, id_referto)
+
+    if not db_referto:
+        raise HTTPException(status_code=404, detail="ID referto non presente a sistema.")
+
+    return db_referto
+
+# Rotta per leggere il referto associato a una specifica prenotazione
+@app.get("/referti/prenotazione/{id_prenotazione}", response_model=schemas.RefertoResponse)
+def lista_referto_by_prenotazione(id_prenotazione: int, db: Session = Depends(get_db)):
+    if not crud.get_prenotazione(db, id_prenotazione):
+        raise HTTPException(status_code=404, detail="ID prenotazione non presente a sistema.")
+
+    db_referto = crud.get_referto_by_id_prenotazione(db, id_prenotazione)
+    if not db_referto:
+        raise HTTPException(status_code=404, detail="Nessun referto emesso per questa prenotazione.")
+
+    return db_referto
+
+# Rotta per leggere tutti i referti emessi in una specifica data
+@app.get("/referti/data/{data_emissione}", response_model=list[schemas.RefertoResponse])
+def lista_referti_by_data(data_emissione: date, db: Session = Depends(get_db)):
+    return crud.get_referti_by_data_emissione(db, data_emissione)
+
+# Rotta per creare un nuovo referto
+@app.post("/referti/", response_model=schemas.RefertoResponse, status_code=201)
+def create_referto(referto: schemas.RefertoCreate, db: Session = Depends(get_db)):
+    if not crud.get_prenotazione(db, referto.id_prenotazione):
+        raise HTTPException(status_code=404, detail="ID prenotazione non presente a sistema.")
+
+    if crud.get_referto_by_id_prenotazione(db, referto.id_prenotazione):
+        raise HTTPException(status_code=400, detail="Referto già presente per questa prenotazione.")
+
+    return crud.create_referto(db, referto)
+
+# Rotta per modificare un referto esistente
+@app.patch("/referti/{id_referto}", response_model=schemas.RefertoResponse)
+def update_referto(id_referto: int, dati_aggiornamento: schemas.RefertoUpdate, db: Session = Depends(get_db)):
+    db_referto = crud.update_referto(db, id_referto, dati_aggiornamento)
+
+    if not db_referto:
+        raise HTTPException(status_code=404, detail="ID referto non presente a sistema.")
+
+    return db_referto
+
+# Rotta per cancellare un referto a sistema
+@app.delete("/referti/{id_referto}", response_model=schemas.RefertoResponse)
+def delete_referto(id_referto: int, db: Session = Depends(get_db)):
+    db_referto = crud.delete_referto(db, id_referto)
+
+    if not db_referto:
+        raise HTTPException(status_code=404, detail="ID referto non presente a sistema.")
+
+    return db_referto
 #endregion

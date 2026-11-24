@@ -121,7 +121,7 @@ class Referto(Base):
     __tablename__ = "referto"
 
     id_referto = Column(Integer, primary_key=True)
-    id_prenotazione = Column(Integer, ForeignKey("prenotazione.id_prenotazione"))
+    id_prenotazione = Column(Integer, ForeignKey("prenotazione.id_prenotazione"), nullable=False, unique=True)
     data_emissione = Column(Date, nullable=False)
     descrizione_sintomi = Column(String)
     diagnosi = Column(String, nullable=False)

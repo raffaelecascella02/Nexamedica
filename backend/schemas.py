@@ -144,7 +144,7 @@ class RefertoBase(BaseModel):
     id_prenotazione: int = Field(..., gt=0)
     data_emissione: date
     descrizione_sintomi: str | None = None
-    diagnosi: str
+    diagnosi: str = Field(..., min_length=1)
 
 class RefertoCreate(RefertoBase):
     pass
@@ -152,4 +152,9 @@ class RefertoCreate(RefertoBase):
 class RefertoResponse(RefertoBase):
     id_referto: int
     model_config = ConfigDict(from_attributes=True)
+
+class RefertoUpdate(BaseModel):
+    data_emissione: Optional[date] = None
+    descrizione_sintomi: Optional[str] = None
+    diagnosi: Optional[str] = Field(None, min_length=1)
 #endregion

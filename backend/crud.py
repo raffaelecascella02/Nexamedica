@@ -267,5 +267,58 @@ def delete_prenotazione(db: Session, prenotazione_id: int):
         db.commit()
 
     return db_prenotazione
+#endregion
 
+#region REFERTO
+# CREATE
+def create_referto(db: Session, referto: schemas.RefertoCreate):
+    db_referto = models.Referto(
+        id_prenotazione = referto.id_prenotazione,
+        data_emissione = referto.data_emissione,
+        descrizione_sintomi = referto.descrizione_sintomi,
+        diagnosi = referto.diagnosi
+    )
+
+    db.add(db_referto)
+    db.commit()
+    db.refresh(db_referto)
+    return db_referto
+
+# READ
+def get_referti(db: Session, skip: int = 0, amount: int = 100):
+    return db.query(models.Referto).offset(skip).limit(amount).all()
+
+def get_referto(db: Session, referto_id: int):
+    return db.query(models.Referto).filter(models.Referto.id_referto == referto_id).first()
+
+def get_referto_by_id_prenotazione(db: Session, prenotazione_id: int):
+    return db.query(models.Referto).filter(models.Referto.id_prenotazione == prenotazione_id).first()
+
+def get_referti_by_data_emissione(db: Session, data_emissione: date):
+    return db.query(models.Referto).filter(models.Referto.data_emissione == data_emissione).all()
+
+# UPDATE
+def update_referto(db: Session, referto_id: int, dati_aggiornamento: schemas.RefertoUpdate):
+    db_referto = get_referto(db, referto_id)
+
+    if db_referto:
+        update_data = dati_aggiornamento.model_dump(exclude_unset=True)
+
+        for chiave, valore in update_data.items():
+            setattr(db_referto, chiave, valore)
+            
+        db.commit()
+        db.refresh(db_referto)
+
+    return db_referto
+
+# DELETE
+def delete_referto(db: Session, referto_id: int):
+    db_referto = get_referto(db, referto_id)
+
+    if db_referto:
+        db.delete(db_referto)
+        db.commit()
+
+    return db_referto
 #endregion
