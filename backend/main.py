@@ -57,12 +57,15 @@ def read_me(current_user: models.Account = Depends(security.get_current_user)):
 #region PAZIENTE
 # Rotta per leggere tutti i pazienti inseriti
 @app.get("/pazienti/", response_model=list[schemas.PazienteResponse])
-def lista_pazienti(db: Session=Depends(get_db)):
+def lista_pazienti(db: Session=Depends(get_db), current_user: models.Account = Depends(security.require_roles(models.RuoloUtente.admin, models.RuoloUtente.medico))):
     return crud.get_pazienti(db)
 
 # Rotta per leggere i dati di un paziente da DB
 @app.get("/pazienti/{id_paziente}", response_model=schemas.PazienteResponse)
-def lista_paziente_by_id(id_paziente: int, db: Session = Depends(get_db)):
+def lista_paziente_by_id(id_paziente: int, db: Session = Depends(get_db), current_user: models.Account = Depends(security.require_roles(models.RuoloUtente.admin, models.RuoloUtente.medico, models.RuoloUtente.paziente))):
+    if cast(models.RuoloUtente, current_user.ruolo) == models.RuoloUtente.paziente and cast(int, current_user.id_account) != id_paziente:
+        raise HTTPException(status_code=403, detail="Non puoi visualizzare i dati di un altro paziente.")
+
     db_paziente = crud.get_paziente(db, id_paziente)
 
     if not db_paziente:
@@ -82,7 +85,10 @@ def create_paziente(paziente: schemas.PazienteCreate, db: Session=Depends(get_db
 
 # Rotta per l'aggiornamento di un paziente (payload parziale)
 @app.patch("/pazienti/{id_paziente}", response_model=schemas.PazienteResponse)
-def update_paziente(id_paziente: int, aggiornamento_paziente: schemas.PazienteUpdate, db: Session = Depends(get_db)):
+def update_paziente(id_paziente: int, aggiornamento_paziente: schemas.PazienteUpdate, db: Session = Depends(get_db), current_user: models.Account = Depends(security.require_roles(models.RuoloUtente.admin, models.RuoloUtente.paziente))):
+    if cast(models.RuoloUtente, current_user.ruolo) == models.RuoloUtente.paziente and cast(int, current_user.id_account) != id_paziente:
+        raise HTTPException(status_code=403, detail="Non puoi modificare i dati di un altro paziente.")
+    
     db_paziente = crud.get_paziente(db, id_paziente)
 
     if not db_paziente:
@@ -92,7 +98,7 @@ def update_paziente(id_paziente: int, aggiornamento_paziente: schemas.PazienteUp
 
 # Rotta per l'eliminazione di un paziente a DB tramite ID (PK)
 @app.delete("/pazienti/{id_paziente}", response_model=schemas.PazienteResponse)
-def delete_paziente(id_paziente: int, db: Session=Depends(get_db)):
+def delete_paziente(id_paziente: int, db: Session=Depends(get_db), current_user: models.Account = Depends(security.require_roles(models.RuoloUtente.admin))):
     db_paziente = crud.delete_paziente(db, id_paziente)
 
     if not db_paziente:
@@ -102,7 +108,7 @@ def delete_paziente(id_paziente: int, db: Session=Depends(get_db)):
 
 # Rotta per l'eliminazione di un paziente a DB tramite Codice Fiscale
 @app.delete("/pazienti/cf/{codice_fiscale}", response_model=schemas.PazienteResponse)
-def delete_paziente_by_cf(codice_fiscale: str, db: Session = Depends(get_db)):
+def delete_paziente_by_cf(codice_fiscale: str, db: Session = Depends(get_db), current_user: models.Account = Depends(security.require_roles(models.RuoloUtente.admin))):
     db_paziente = crud.delete_paziente_by_cf(db, codice_fiscale)
 
     if not db_paziente:
@@ -129,7 +135,7 @@ def lista_medico_by_id(id_medico: int, db: Session = Depends(get_db)):
 
 # Rotta per l'inserimento di un medico a DB
 @app.post("/medici/", response_model=schemas.MedicoResponse, status_code=201)
-def create_medico(medico: schemas.MedicoCreate, db: Session=Depends(get_db)):
+def create_medico(medico: schemas.MedicoCreate, db: Session=Depends(get_db), current_user: models.Account = Depends(security.require_roles(models.RuoloUtente.admin))):
     db_medico = crud.get_medico_by_matricola(db, matricola=medico.matricola)
 
     if db_medico:
@@ -139,7 +145,7 @@ def create_medico(medico: schemas.MedicoCreate, db: Session=Depends(get_db)):
 
 # Rotta per l'aggiornamento di un medico (payload parziale)
 @app.patch("/medici/{id_medico}", response_model=schemas.MedicoResponse)
-def update_medico(id_medico: int, aggiornamento_medico: schemas.MedicoUpdate, db: Session = Depends(get_db)):
+def update_medico(id_medico: int, aggiornamento_medico: schemas.MedicoUpdate, db: Session = Depends(get_db), current_user: models.Account = Depends(security.require_roles(models.RuoloUtente.admin))):
     db_medico = crud.get_medico(db, id_medico)
 
     if not db_medico:
@@ -149,7 +155,7 @@ def update_medico(id_medico: int, aggiornamento_medico: schemas.MedicoUpdate, db
 
 # Rotta per l'eliminazione di un medico a DB tramite ID (PK)
 @app.delete("/medici/{id_medico}", response_model=schemas.MedicoResponse)
-def delete_medico(id_medico: int, db: Session=Depends(get_db)):
+def delete_medico(id_medico: int, db: Session=Depends(get_db), current_user: models.Account = Depends(security.require_roles(models.RuoloUtente.admin))):
     db_medico = crud.delete_medico(db, id_medico)
 
     if not db_medico:
@@ -159,7 +165,7 @@ def delete_medico(id_medico: int, db: Session=Depends(get_db)):
 
 # Rotta per l'eliminazione di un medico a DB tramite matricola
 @app.delete("/medici/matricola/{matricola}", response_model=schemas.MedicoResponse)
-def delete_medico_by_matricola(matricola: str, db: Session = Depends(get_db)):
+def delete_medico_by_matricola(matricola: str, db: Session = Depends(get_db), current_user: models.Account = Depends(security.require_roles(models.RuoloUtente.admin))):
     db_medico = crud.delete_medico_by_matricola(db, matricola)
 
     if not db_medico:
@@ -187,7 +193,7 @@ def lista_prestazione_by_id(id_prestazione: int, db: Session = Depends(get_db)):
 
 # Rotta per inserire una nuova prestazione nel catalogo
 @app.post("/prestazioni/", response_model=schemas.CatalogoPrestazioniResponse, status_code=201)
-def create_prestazione(prestazione: schemas.CatalogoPrestazioniCreate, db: Session = Depends(get_db)):
+def create_prestazione(prestazione: schemas.CatalogoPrestazioniCreate, db: Session = Depends(get_db), current_user: models.Account = Depends(security.require_roles(models.RuoloUtente.admin))):
     db_prestazione = crud.get_prestazione_by_nome(db, nome_visita=prestazione.nome_visita)
 
     if db_prestazione:
@@ -197,7 +203,7 @@ def create_prestazione(prestazione: schemas.CatalogoPrestazioniCreate, db: Sessi
 
 # Rotta per modificare una prestazione
 @app.patch("/prestazioni/{id_prestazione}", response_model=schemas.CatalogoPrestazioniResponse)
-def update_prestazione(id_prestazione: int, dati_aggiornamento: schemas.CatalogoPrestazioniUpdate, db: Session = Depends(get_db)):
+def update_prestazione(id_prestazione: int, dati_aggiornamento: schemas.CatalogoPrestazioniUpdate, db: Session = Depends(get_db), current_user: models.Account = Depends(security.require_roles(models.RuoloUtente.admin))):
     db_prestazione = crud.get_prestazione(db, id_prestazione)
 
     if not db_prestazione:
@@ -207,7 +213,7 @@ def update_prestazione(id_prestazione: int, dati_aggiornamento: schemas.Catalogo
 
 # Rotta per cancellare una prestazione presente nel catalogo
 @app.delete("/prestazioni/{id_prestazione}", response_model=schemas.CatalogoPrestazioniResponse)
-def delete_prestazione(id_prestazione: int, db: Session = Depends(get_db)):
+def delete_prestazione(id_prestazione: int, db: Session = Depends(get_db), current_user: models.Account = Depends(security.require_roles(models.RuoloUtente.admin))):
     db_prestazione = crud.delete_prestazione(db, id_prestazione)
 
     if not db_prestazione:
