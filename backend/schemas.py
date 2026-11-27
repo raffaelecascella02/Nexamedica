@@ -4,7 +4,7 @@ from datetime import date
 import codicefiscale
 from models import RuoloUtente, Sesso, MansioneAmministratore, StatoPagamento, StatoVisita # Importiamo gli Enum di SQLAlchemy da models.py
 
-#region ACCOUNT
+#region ACCOUNT E AUTENTICAZIONE
 class AccountBase(BaseModel):
     email: EmailStr
     ruolo: RuoloUtente
@@ -15,6 +15,11 @@ class AccountCreate(AccountBase):
 class AccountResponse(AccountBase):
     id_account: int
     model_config = ConfigDict(from_attributes=True)
+
+# autenticazione
+class Token(BaseModel):
+    access_token: str
+    token_type: str
 #endregion
 
 #region PAZIENTE

@@ -2,6 +2,11 @@ from sqlalchemy.orm import Session
 import models, schemas, security
 from datetime import date
 
+#region AUTENTICAZIONE
+def get_account_by_email(db: Session, email: str):
+    return db.query(models.Account).filter(models.Account.email == email).first()
+#endregion
+
 #region PAZIENTE
 # CREATE
 def create_paziente(db: Session, paziente: schemas.PazienteCreate):

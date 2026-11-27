@@ -1,10 +1,11 @@
 from fastapi import FastAPI, Depends, HTTPException
+from fastapi.security import OAuth2PasswordRequestForm
+from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 from database import engine, get_db
-import models, crud, schemas
+import models, crud, schemas, security
 from typing import cast
 from datetime import date
-from fastapi.middleware.cors import CORSMiddleware
 
 models.Base.metadata.create_all(bind=engine)
 
@@ -27,6 +28,31 @@ app.add_middleware(
 @app.get("/")
 def read_root():
     return {"stato": "Online", "messaggio": "Database Nexamedica inizializzato con successo!"}
+
+#region AUTENTICAZIONE
+# Rotta di login OAuth2: verifica email/password e restituisce il token JWT
+@app.post("/login", response_model=schemas.Token)
+def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
+    # OAuth2PasswordRequestForm usa il campo 'username': nel nostro caso contiene l'email
+    db_account = crud.get_account_by_email(db, form_data.username)
+
+    if not db_account or not security.verify_password(form_data.password, cast(str, db_account.hashed_password)):
+        raise HTTPException(
+            status_code=401,
+            detail="Email o password non corretti.",
+            headers={"WWW-Authenticate": "Bearer"}
+        )
+
+    access_token = security.create_access_token(
+        data={"sub": str(db_account.id_account), "ruolo": db_account.ruolo.value}
+    )
+    return {"access_token": access_token, "token_type": "bearer"}
+
+# Rotta protetta per verificare il token e leggere i dati dell'utente autenticato
+@app.get("/me", response_model=schemas.AccountResponse)
+def read_me(current_user: models.Account = Depends(security.get_current_user)):
+    return current_user
+#endregion
 
 #region PAZIENTE
 # Rotta per leggere tutti i pazienti inseriti
