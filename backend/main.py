@@ -225,22 +225,28 @@ def delete_prestazione(id_prestazione: int, db: Session = Depends(get_db), curre
 #region PRENOTAZIONE
 # Rotta per leggere tutte le prenotazioni presenti a sistema
 @app.get("/prenotazioni/", response_model=list[schemas.PrenotazioneResponse])
-def lista_prenotazioni(db: Session=Depends(get_db)):
+def lista_prenotazioni(db: Session=Depends(get_db), current_user: models.Account = Depends(security.require_roles(models.RuoloUtente.admin, models.RuoloUtente.medico))):
     return crud.get_prenotazioni(db)
 
 # Rotta per leggere i dati di una singola prenotazione presente a DB
 @app.get("/prenotazioni/{id_prenotazione}", response_model=schemas.PrenotazioneResponse)
-def lista_prenotazione_by_id(id_prenotazione: int, db: Session = Depends(get_db)):
+def lista_prenotazione_by_id(id_prenotazione: int, db: Session = Depends(get_db), current_user: models.Account = Depends(security.require_roles(models.RuoloUtente.admin, models.RuoloUtente.medico, models.RuoloUtente.paziente))):
     db_prenotazione = crud.get_prenotazione(db, id_prenotazione)
 
     if not db_prenotazione:
         raise HTTPException(status_code=404, detail="ID prenotazione non presente a sistema.")
+
+    if cast(models.RuoloUtente, current_user.ruolo) == models.RuoloUtente.paziente and cast(int, db_prenotazione.id_paziente) != cast(int, current_user.id_account):
+        raise HTTPException(status_code=403, detail="Non puoi visualizzare la prenotazione di un altro paziente.")
     
     return db_prenotazione
 
 # Rotta per leggere tutte le prenotazioni di un singolo paziente
 @app.get("/prenotazioni/paziente/{id_paziente}", response_model=list[schemas.PrenotazioneResponse])
-def lista_prenotazioni_by_paziente(id_paziente: int, db: Session = Depends(get_db)):
+def lista_prenotazioni_by_paziente(id_paziente: int, db: Session = Depends(get_db), current_user: models.Account = Depends(security.require_roles(models.RuoloUtente.admin, models.RuoloUtente.medico, models.RuoloUtente.paziente))):
+    if cast(models.RuoloUtente, current_user.ruolo) == models.RuoloUtente.paziente and cast(int, current_user.id_account) != id_paziente:
+        raise HTTPException(status_code=403, detail="Non puoi visualizzare la prenotazione di un altro paziente.")
+
     if not crud.get_paziente(db, id_paziente):
         raise HTTPException(status_code=404, detail="ID paziente non presente a sistema.")
 
@@ -248,7 +254,10 @@ def lista_prenotazioni_by_paziente(id_paziente: int, db: Session = Depends(get_d
 
 # Rotta per leggere tutte le prenotazioni di un singolo medico
 @app.get("/prenotazioni/medico/{id_medico}", response_model=list[schemas.PrenotazioneResponse])
-def lista_prenotazioni_by_medico(id_medico: int, db: Session = Depends(get_db)):
+def lista_prenotazioni_by_medico(id_medico: int, db: Session = Depends(get_db), current_user: models.Account = Depends(security.require_roles(models.RuoloUtente.admin, models.RuoloUtente.medico))):
+    if cast(models.RuoloUtente, current_user.ruolo) == models.RuoloUtente.medico and cast(int, current_user.id_account) != id_medico:
+        raise HTTPException(status_code=403, detail="Non puoi visualizzare le prenotazioni di un altro medico.")
+
     if not crud.get_medico(db, id_medico):
         raise HTTPException(status_code=404, detail="ID medico non presente a sistema.")
 
@@ -256,7 +265,10 @@ def lista_prenotazioni_by_medico(id_medico: int, db: Session = Depends(get_db)):
 
 # Rotta per l'inserimento di una prenotazione a DB
 @app.post("/prenotazioni/", response_model=schemas.PrenotazioneResponse, status_code=201)
-def create_prenotazione(prenotazione: schemas.PrenotazioneCreate, db: Session = Depends(get_db)):
+def create_prenotazione(prenotazione: schemas.PrenotazioneCreate, db: Session = Depends(get_db), current_user: models.Account = Depends(security.require_roles(models.RuoloUtente.admin, models.RuoloUtente.paziente))):
+    if cast(models.RuoloUtente, current_user.ruolo) == models.RuoloUtente.paziente and cast(int, current_user.id_account) != prenotazione.id_paziente:
+        raise HTTPException(status_code=403, detail="Non puoi creare una prenotazione per un altro paziente.")
+    
     if not crud.get_paziente(db, prenotazione.id_paziente):
         raise HTTPException(status_code=404, detail="ID paziente non presente a sistema")
     
@@ -281,7 +293,7 @@ def create_prenotazione(prenotazione: schemas.PrenotazioneCreate, db: Session = 
 
 # Rotta per modificare una prenotazione
 @app.patch("/prenotazioni/{id_prenotazione}", response_model=schemas.PrenotazioneResponse)
-def update_prenotazione(id_prenotazione: int, dati_aggiornamento: schemas.PrenotazioneUpdate, db: Session = Depends(get_db)):
+def update_prenotazione(id_prenotazione: int, dati_aggiornamento: schemas.PrenotazioneUpdate, db: Session = Depends(get_db), current_user: models.Account = Depends(security.require_roles(models.RuoloUtente.admin, models.RuoloUtente.medico))):
     db_prenotazione = crud.get_prenotazione(db, id_prenotazione)
 
     if not db_prenotazione:
@@ -299,36 +311,47 @@ def update_prenotazione(id_prenotazione: int, dati_aggiornamento: schemas.Prenot
 
 # Rotta per cancellare una prenotazione presente nel sistema
 @app.delete("/prenotazioni/{id_prenotazione}", response_model=schemas.PrenotazioneResponse)
-def delete_prenotazione(id_prenotazione: int, db: Session = Depends(get_db)):
-    db_prenotazione = crud.delete_prenotazione(db, id_prenotazione)
+def delete_prenotazione(id_prenotazione: int, db: Session = Depends(get_db), current_user: models.Account = Depends(security.require_roles(models.RuoloUtente.admin, models.RuoloUtente.paziente))):
+    db_prenotazione = crud.get_prenotazione(db, id_prenotazione)
 
     if not db_prenotazione:
         raise HTTPException(status_code=404, detail="ID prenotazione non presente a sistema.")
 
-    return db_prenotazione
-#endregion
+    if cast(models.RuoloUtente, current_user.ruolo) == models.RuoloUtente.paziente and cast(int, db_prenotazione.id_paziente) != cast(int, current_user.id_account):
+        raise HTTPException(status_code=403, detail="Non puoi cancellare la prenotazione di un altro paziente.")
+
+    return crud.delete_prenotazione(db, id_prenotazione)
 
 #region REFERTO
 # Rotta per leggere tutti i referti presenti a sistema (con paginazione)
 @app.get("/referti/", response_model=list[schemas.RefertoResponse])
-def lista_referti(skip: int = 0, amount: int = 100, db: Session = Depends(get_db)):
+def lista_referti(skip: int = 0, amount: int = 100, db: Session = Depends(get_db), current_user: models.Account = Depends(security.require_roles(models.RuoloUtente.medico))):
     return crud.get_referti(db, skip, amount)
 
 # Rotta per leggere un singolo referto tramite ID
 @app.get("/referti/{id_referto}", response_model=schemas.RefertoResponse)
-def lista_referto_by_id(id_referto: int, db: Session = Depends(get_db)):
+def lista_referto_by_id(id_referto: int, db: Session = Depends(get_db), current_user: models.Account = Depends(security.require_roles(models.RuoloUtente.medico, models.RuoloUtente.paziente))):
     db_referto = crud.get_referto(db, id_referto)
 
     if not db_referto:
         raise HTTPException(status_code=404, detail="ID referto non presente a sistema.")
 
+    if cast(models.RuoloUtente, current_user.ruolo) == models.RuoloUtente.paziente:
+        db_prenotazione = crud.get_prenotazione(db, cast(int, db_referto.id_prenotazione))
+        if not db_prenotazione or cast(int, db_prenotazione.id_paziente) != cast(int, current_user.id_account):
+            raise HTTPException(status_code=403, detail="Non puoi visualizzare il referto di un altro paziente.")
+
     return db_referto
 
 # Rotta per leggere il referto associato a una specifica prenotazione
 @app.get("/referti/prenotazione/{id_prenotazione}", response_model=schemas.RefertoResponse)
-def lista_referto_by_prenotazione(id_prenotazione: int, db: Session = Depends(get_db)):
-    if not crud.get_prenotazione(db, id_prenotazione):
+def lista_referto_by_prenotazione(id_prenotazione: int, db: Session = Depends(get_db), current_user: models.Account = Depends(security.require_roles(models.RuoloUtente.medico, models.RuoloUtente.paziente))):
+    db_prenotazione = crud.get_prenotazione(db, id_prenotazione)
+    if not db_prenotazione:
         raise HTTPException(status_code=404, detail="ID prenotazione non presente a sistema.")
+
+    if cast(models.RuoloUtente, current_user.ruolo) == models.RuoloUtente.paziente and cast(int, db_prenotazione.id_paziente) != cast(int, current_user.id_account):
+        raise HTTPException(status_code=403, detail="Non puoi visualizzare il referto di un altro paziente.")
 
     db_referto = crud.get_referto_by_id_prenotazione(db, id_prenotazione)
     if not db_referto:
@@ -338,12 +361,12 @@ def lista_referto_by_prenotazione(id_prenotazione: int, db: Session = Depends(ge
 
 # Rotta per leggere tutti i referti emessi in una specifica data
 @app.get("/referti/data/{data_emissione}", response_model=list[schemas.RefertoResponse])
-def lista_referti_by_data(data_emissione: date, db: Session = Depends(get_db)):
+def lista_referti_by_data(data_emissione: date, db: Session = Depends(get_db), current_user: models.Account = Depends(security.require_roles(models.RuoloUtente.medico))):
     return crud.get_referti_by_data_emissione(db, data_emissione)
 
 # Rotta per creare un nuovo referto
 @app.post("/referti/", response_model=schemas.RefertoResponse, status_code=201)
-def create_referto(referto: schemas.RefertoCreate, db: Session = Depends(get_db)):
+def create_referto(referto: schemas.RefertoCreate, db: Session = Depends(get_db), current_user: models.Account = Depends(security.require_roles(models.RuoloUtente.medico))):
     if not crud.get_prenotazione(db, referto.id_prenotazione):
         raise HTTPException(status_code=404, detail="ID prenotazione non presente a sistema.")
 
@@ -354,7 +377,7 @@ def create_referto(referto: schemas.RefertoCreate, db: Session = Depends(get_db)
 
 # Rotta per modificare un referto esistente
 @app.patch("/referti/{id_referto}", response_model=schemas.RefertoResponse)
-def update_referto(id_referto: int, dati_aggiornamento: schemas.RefertoUpdate, db: Session = Depends(get_db)):
+def update_referto(id_referto: int, dati_aggiornamento: schemas.RefertoUpdate, db: Session = Depends(get_db), current_user: models.Account = Depends(security.require_roles(models.RuoloUtente.medico))):
     db_referto = crud.update_referto(db, id_referto, dati_aggiornamento)
 
     if not db_referto:
@@ -364,7 +387,7 @@ def update_referto(id_referto: int, dati_aggiornamento: schemas.RefertoUpdate, d
 
 # Rotta per cancellare un referto a sistema
 @app.delete("/referti/{id_referto}", response_model=schemas.RefertoResponse)
-def delete_referto(id_referto: int, db: Session = Depends(get_db)):
+def delete_referto(id_referto: int, db: Session = Depends(get_db), current_user: models.Account = Depends(security.require_roles(models.RuoloUtente.admin))):
     db_referto = crud.delete_referto(db, id_referto)
 
     if not db_referto:
